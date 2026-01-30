@@ -1,0 +1,175 @@
+:root {
+  color-scheme: light;
+  font-family: "Fira Sans", "Segoe UI", sans-serif;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: #f5f6f7;
+  color: #1f2933;
+}
+
+.container {
+  max-width: 720px;
+  margin: 32px auto;
+  padding: 24px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+h1 {
+  margin: 0 0 12px;
+  font-size: 24px;
+}
+
+h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+p {
+  margin: 0 0 20px;
+  line-height: 1.4;
+}
+
+form {
+  display: grid;
+  gap: 16px;
+}
+
+.card {
+  margin: 16px 0 24px;
+  padding: 16px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #e3e8ef;
+}
+
+details summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.guide {
+  margin: 12px 0 0 18px;
+  padding: 0;
+  line-height: 1.5;
+}
+
+.guide code {
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: #eef2f7;
+  font-size: 12px;
+}
+
+.note {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #52606d;
+}
+
+label {
+  display: grid;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+}
+
+.checkbox input {
+  width: 16px;
+  height: 16px;
+}
+
+input {
+  padding: 10px 12px;
+  border: 1px solid #cbd2d9;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+button {
+  width: 140px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 999px;
+  background: #2563eb;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #1d4ed8;
+}
+
+.hint {
+  font-weight: 400;
+  font-size: 12px;
+  color: #52606d;
+}
+
+.status {
+  margin-left: 8px;
+  font-size: 13px;
+  color: #1f7a1f;
+}
+
+.status-panel {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  border: 1px solid #d7dde5;
+  font-size: 13px;
+}
+
+.status-line {
+  color: #334e68;
+}
+
+.warning {
+  color: #a61b1b;
+}
+
+.hidden {
+  display: none;
+}
+
+.redirect {
+  font-size: 13px;
+  color: #52606d;
+}
+
+.redirect code {
+  display: block;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #eef2f7;
+  color: #1f2933;
+  font-family: \"SFMono-Regular\", \"Consolas\", monospace;
+  font-size: 12px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+#testConnection {
+  background: #0f766e;
+}
+
+#testConnection:hover {
+  background: #0b5f57;
+}

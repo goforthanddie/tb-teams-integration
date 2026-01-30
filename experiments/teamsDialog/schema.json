@@ -1,0 +1,81 @@
+[
+  {
+    "namespace": "teamsDialog",
+    "description": "Thunderbird calendar event dialog integration.",
+    "events": [
+      {
+        "name": "onTeamsButtonClick",
+        "type": "function",
+        "description": "Fires when the Teams button is clicked in the event dialog.",
+        "parameters": [
+          {
+            "name": "payload",
+            "type": "object",
+            "properties": {
+              "dialogId": { "type": "integer" },
+              "title": { "type": "string" },
+              "location": { "type": "string" },
+              "startDateTime": { "type": "string" },
+              "endDateTime": { "type": "string" },
+              "descriptionText": { "type": "string" },
+              "isAllDay": { "type": "boolean" }
+            }
+          }
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "name": "register",
+        "type": "function",
+        "description": "Start listening for calendar event dialogs.",
+        "parameters": []
+      },
+      {
+        "name": "insertJoinInfo",
+        "type": "function",
+        "description": "Insert the Teams join information into the event dialog.",
+        "parameters": [
+          {
+            "name": "info",
+            "type": "object",
+            "properties": {
+              "dialogId": { "type": "integer" },
+              "joinUrl": { "type": "string" },
+              "label": { "type": "string" }
+            }
+          }
+        ]
+      },
+      {
+        "name": "showError",
+        "type": "function",
+        "description": "Show an error to the user in the event dialog.",
+        "parameters": [
+          {
+            "name": "info",
+            "type": "object",
+            "properties": {
+              "dialogId": { "type": "integer" },
+              "message": { "type": "string" }
+            }
+          }
+        ]
+      },
+      {
+        "name": "setDebug",
+        "type": "function",
+        "description": "Enable or disable debug logging.",
+        "parameters": [
+          {
+            "name": "info",
+            "type": "object",
+            "properties": {
+              "enabled": { "type": "boolean" }
+            }
+          }
+        ]
+      }
+    ]
+  }
+]

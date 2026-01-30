@@ -1,0 +1,88 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Teams Integration Settings</title>
+    <link rel="stylesheet" href="options.css">
+  </head>
+  <body>
+    <main class="container">
+      <h1>Teams Integration Settings</h1>
+      <p>
+        Configure the Azure AD app registration used for Microsoft Graph. These values are required
+        before the add-on can authenticate.
+      </p>
+
+      <section class="card">
+        <h2>Setup Guide</h2>
+        <details>
+          <summary>Show setup steps</summary>
+          <ol class="guide">
+            <li>Create an app registration in Microsoft Entra ID.</li>
+            <li>Set supported account types (work/school only recommended).</li>
+            <li>Add the redirect URI shown below under the SPA platform.</li>
+            <li>Add Microsoft Graph delegated permissions:
+              <code>OnlineMeetings.ReadWrite</code>,
+              <code>openid</code>,
+              <code>profile</code>,
+              <code>offline_access</code>.
+            </li>
+            <li>Grant admin consent (recommended).</li>
+            <li>Paste the Application ID and tenant below and click Save.</li>
+          </ol>
+          <p class="note">
+            Personal Microsoft accounts can sign in if your app allows them, but Graph may not
+            support creating Teams meetings for personal accounts.
+          </p>
+        </details>
+      </section>
+
+      <form id="settings-form">
+        <label>
+          Application ID
+          <input id="clientId" type="text" placeholder="REPLACE_WITH_CLIENT_ID" required>
+        </label>
+
+        <label>
+          Tenant ID or domain
+          <input id="tenant" type="text" placeholder="organizations">
+          <span class="hint">Use your tenant GUID, tenant domain, or "organizations".</span>
+        </label>
+
+        <label>
+          Authority host
+          <input id="authorityHost" type="text" placeholder="https://login.microsoftonline.com">
+        </label>
+
+        <label>
+          Scopes
+          <input id="scopes" type="text" placeholder="OnlineMeetings.ReadWrite offline_access openid profile">
+        </label>
+
+        <label class="checkbox">
+          <input id="debugEnabled" type="checkbox">
+          Enable debug logging
+        </label>
+
+        <div class="redirect">
+          Redirect URI:
+          <code id="redirectUri"></code>
+        </div>
+
+        <div class="status-panel">
+          <div id="configStatus" class="status-line">Setup status: unknown</div>
+          <div id="accountWarning" class="status-line warning hidden"></div>
+        </div>
+
+        <div class="actions">
+          <button type="submit">Save</button>
+          <button type="button" id="testConnection">Test connection</button>
+          <span id="status" class="status"></span>
+          <span id="testStatus" class="status"></span>
+        </div>
+      </form>
+    </main>
+
+    <script src="options.js"></script>
+  </body>
+</html>
