@@ -68,3 +68,15 @@ Key files:
 - `experiments/teamsDialog/parent.js`
 - `experiments/teamsDialog/schema.json`
 - `options/options.html`
+- `options/options.js`
+- `options/options.css`
+- `shared/constants.js`
+- `shared/validation.js`
+- `scripts/build-xpi.sh`
+- `scripts/test.js`
+
+Build:
+- `scripts/build-xpi.sh` (outputs `dist/tb-teams-integration.xpi`)
+
+Tests:
+- `node scripts/test.js`
