@@ -5,8 +5,8 @@
   "description": "Add a Create Teams Meeting button to Thunderbird calendar events.",
   "applications": {
     "gecko": {
-      "id": "tb-teams-integration@example.com",
-      "strict_min_version": "147.0"
+      "id": "tb-teams-integration@pressler.pro",
+      "strict_min_version": "145.0"
     }
   },
   "background": {

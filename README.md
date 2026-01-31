@@ -1,6 +1,7 @@
 # TB Teams Integration
 
 Adds a **Create Teams meeting** button to the Thunderbird event dialog. When clicked, the add-on authenticates the user with Microsoft (OAuth 2.0 + PKCE), creates an online meeting via Microsoft Graph, and injects the join link into the event description (and location if empty).
+You need to register an App within Microsoft Entra for your organisation. This won't work if you just have a personal Microsoft Account.
 
 ## Setup (Microsoft Entra ID)
 
@@ -34,6 +35,23 @@ Adds a **Create Teams meeting** button to the Thunderbird event dialog. When cli
 - If the user is already signed in to Microsoft in the auth window, SSO will reduce friction.
 - Tokens are stored in Thunderbird extension storage and refreshed automatically.
 - Personal Microsoft accounts can sign in if your app allows them, but Teams meeting creation may not be supported.
+
+
+## Security and Data Handling
+
+This add-on requests the minimum permissions needed for OAuth (`identity`) and local settings storage (`storage`). It shows an “unrestricted access” warning because it uses a Thunderbird Experiment API to add the Teams button to the event dialog; experiments are treated as privileged even if the declared permissions are minimal.
+
+What it can access:
+- Calendar event data visible in the event dialog (title, start/end time, location, description) to create the meeting and insert the join URL.
+
+What is stored locally:
+- OAuth access and refresh tokens and their expiration time in Thunderbird’s extension storage.
+
+Where data is sent:
+- Microsoft login endpoints for OAuth.
+- Microsoft Graph (`/me/onlineMeetings`) to create the meeting.
+
+The add-on does not transmit data to any other servers.
 
 ## Development
 
