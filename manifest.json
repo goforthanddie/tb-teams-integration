@@ -1,15 +1,15 @@
 {
   "manifest_version": 2,
   "name": "TB Teams Integration",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Add a Create Teams Meeting button to Thunderbird calendar events.",
   "author": "Lorenz Pressler",
   "homepage_url": "https://github.com/rezeptpflichtig/tb-teams-integration",
   "applications": {
     "gecko": {
       "id": "tb-teams-integration@pressler.pro",
-      "strict_min_version": "145.0",
-      "strict_max_version": "148"
+      "strict_min_version": "140.0",
+      "strict_max_version": "149.0a1"
 
     }
   },
