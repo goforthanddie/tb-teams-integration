@@ -39,6 +39,10 @@ You need to register an App within Microsoft Entra for your organisation. This w
 - Tokens are stored in Thunderbird extension storage and refreshed automatically.
 - Personal Microsoft accounts can sign in if your app allows them, but Teams meeting creation may not be supported.
 
+## Enterprise Deployment
+
+You can preconfigure default values by editing `shared/constants.js` before packaging the add-on. If you replace `DEFAULT_APPLICATION_ID`, `DEFAULT_TENANT`, or `DEFAULT_AUTHORITY_HOST` with your organization defaults, the options page will be pre-filled and the add-on will only prompt users when the Application ID is still the placeholder value. Rebuild the XPI after making these changes.
+
 
 ## Security and Data Handling
 
