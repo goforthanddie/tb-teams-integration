@@ -1,28 +1,15 @@
-/* global browser */
-
-const DEFAULT_SCOPES = [
-  "OnlineMeetings.ReadWrite",
-  "offline_access",
-  "openid",
-  "profile"
-];
+/* global browser, DEFAULT_APPLICATION_ID, DEFAULT_TENANT, DEFAULT_AUTHORITY_HOST, DEFAULT_SCOPES, isPlaceholder, validateSettings */
 
 async function getSettings() {
   const data = await browser.storage.local.get({
-    clientId: "REPLACE_WITH_CLIENT_ID",
-    tenant: "organizations",
-    authorityHost: "https://login.microsoftonline.com",
+    clientId: DEFAULT_APPLICATION_ID,
+    tenant: DEFAULT_TENANT,
+    authorityHost: DEFAULT_AUTHORITY_HOST,
     scopes: DEFAULT_SCOPES.join(" "),
-    debugEnabled: false
+    debugEnabled: false,
+    allowCustomAuthorityHost: false
   });
   return data;
-}
-
-function isPlaceholder(value) {
-  if (!value) {
-    return true;
-  }
-  return value === "REPLACE_WITH_CLIENT_ID";
 }
 
 function decodeJwtPayload(token) {
@@ -81,11 +68,34 @@ async function buildPkce() {
   return { verifier, challenge };
 }
 
+async function readResponsePayload(res) {
+  const text = await res.text();
+  if (!text) {
+    return { json: null, text: "" };
+  }
+  try {
+    return { json: JSON.parse(text), text };
+  } catch (err) {
+    return { json: null, text };
+  }
+}
+
 async function getAccessToken(interactive = true) {
   const settings = await getSettings();
+  if (settings.debugEnabled) {
+    console.log("[tb-teams] getAccessToken start");
+  }
   if (isPlaceholder(settings.clientId)) {
     await browser.runtime.openOptionsPage();
     throw new Error("Missing client ID. Configure the add-on options first.");
+  }
+
+  const validation = validateSettings(settings);
+  if (!validation.ok) {
+    throw new Error(validation.errors.join(" "));
+  }
+  if (validation.warnings.length && settings.debugEnabled) {
+    console.log(`[tb-teams] Settings warning: ${validation.warnings.join(" ")}`);
   }
 
   const tokenState = await browser.storage.local.get({
@@ -96,13 +106,25 @@ async function getAccessToken(interactive = true) {
 
   const now = Date.now();
   if (tokenState.accessToken && tokenState.tokenExpiresAt > now + 60000) {
+    if (settings.debugEnabled) {
+      console.log("[tb-teams] Using cached access token.");
+    }
     return tokenState.accessToken;
   }
 
   if (tokenState.refreshToken) {
+    if (settings.debugEnabled) {
+      console.log("[tb-teams] Refreshing access token.");
+    }
     const refreshed = await refreshAccessToken(settings, tokenState.refreshToken);
     if (refreshed) {
+      if (settings.debugEnabled) {
+        console.log("[tb-teams] Refresh succeeded.");
+      }
       return refreshed;
+    }
+    if (settings.debugEnabled) {
+      console.log("[tb-teams] Refresh failed; falling back to interactive login.");
     }
   }
 
@@ -111,9 +133,12 @@ async function getAccessToken(interactive = true) {
   }
 
   const { verifier, challenge } = await buildPkce();
+  const state = randomString(32);
   const redirectUri = browser.identity.getRedirectURL();
   const scopes = settings.scopes || DEFAULT_SCOPES.join(" ");
-  const authority = `${settings.authorityHost.replace(/\/$/, "")}/${settings.tenant}`;
+  const authorityHost = validation.normalized.authorityHost || settings.authorityHost;
+  const tenant = validation.normalized.tenant || settings.tenant;
+  const authority = `${authorityHost.replace(/\/$/, "")}/${tenant}`;
 
   const authUrl = new URL(`${authority}/oauth2/v2.0/authorize`);
   authUrl.searchParams.set("client_id", settings.clientId);
@@ -124,23 +149,45 @@ async function getAccessToken(interactive = true) {
   authUrl.searchParams.set("code_challenge", challenge);
   authUrl.searchParams.set("code_challenge_method", "S256");
   authUrl.searchParams.set("prompt", "select_account");
+  authUrl.searchParams.set("state", state);
 
+  if (settings.debugEnabled) {
+    console.log("[tb-teams] Launching auth flow.");
+  }
   const responseUrl = await browser.identity.launchWebAuthFlow({
     url: authUrl.toString(),
     interactive: true
   });
 
-  const code = new URL(responseUrl).searchParams.get("code");
+  const responseParams = new URL(responseUrl).searchParams;
+  const authError = responseParams.get("error");
+  if (authError) {
+    const description = responseParams.get("error_description") || authError;
+    throw new Error(`Authorization failed: ${description}`);
+  }
+
+  const returnedState = responseParams.get("state");
+  if (returnedState !== state) {
+    throw new Error("Authorization failed: invalid state.");
+  }
+
+  const code = responseParams.get("code");
   if (!code) {
     throw new Error("Authorization failed: no code returned.");
   }
 
   const token = await exchangeCodeForToken(settings, code, verifier, redirectUri, scopes);
+  if (settings.debugEnabled) {
+    console.log("[tb-teams] Token exchange succeeded.");
+  }
   return token;
 }
 
 async function exchangeCodeForToken(settings, code, verifier, redirectUri, scopes) {
-  const authority = `${settings.authorityHost.replace(/\/$/, "")}/${settings.tenant}`;
+  const validation = validateSettings(settings);
+  const authorityHost = validation.normalized.authorityHost || settings.authorityHost;
+  const tenant = validation.normalized.tenant || settings.tenant;
+  const authority = `${authorityHost.replace(/\/$/, "")}/${tenant}`;
   const body = new URLSearchParams();
   body.set("client_id", settings.clientId);
   body.set("grant_type", "authorization_code");
@@ -155,9 +202,13 @@ async function exchangeCodeForToken(settings, code, verifier, redirectUri, scope
     body
   });
 
-  const json = await res.json();
+  const { json, text } = await readResponsePayload(res);
   if (!res.ok) {
-    throw new Error(json.error_description || "Token exchange failed.");
+    const message = json?.error_description || json?.error?.message || text || `Token exchange failed (HTTP ${res.status}).`;
+    throw new Error(message);
+  }
+  if (!json) {
+    throw new Error("Token exchange failed: invalid response.");
   }
 
   await persistToken(json);
@@ -165,7 +216,10 @@ async function exchangeCodeForToken(settings, code, verifier, redirectUri, scope
 }
 
 async function refreshAccessToken(settings, refreshToken) {
-  const authority = `${settings.authorityHost.replace(/\/$/, "")}/${settings.tenant}`;
+  const validation = validateSettings(settings);
+  const authorityHost = validation.normalized.authorityHost || settings.authorityHost;
+  const tenant = validation.normalized.tenant || settings.tenant;
+  const authority = `${authorityHost.replace(/\/$/, "")}/${tenant}`;
   const scopes = settings.scopes || DEFAULT_SCOPES.join(" ");
   const body = new URLSearchParams();
   body.set("client_id", settings.clientId);
@@ -179,27 +233,32 @@ async function refreshAccessToken(settings, refreshToken) {
     body
   });
 
-  if (!res.ok) {
+  const { json } = await readResponsePayload(res);
+  if (!res.ok || !json) {
     return null;
   }
 
-  const json = await res.json();
-  await persistToken(json);
+  await persistToken(json, refreshToken);
   return json.access_token;
 }
 
-async function persistToken(tokenResponse) {
+async function persistToken(tokenResponse, existingRefreshToken = "") {
   const expiresInMs = (tokenResponse.expires_in || 0) * 1000;
   const tokenExpiresAt = Date.now() + expiresInMs;
+  const refreshToken = tokenResponse.refresh_token || existingRefreshToken || "";
   await browser.storage.local.set({
     accessToken: tokenResponse.access_token || "",
-    refreshToken: tokenResponse.refresh_token || "",
+    refreshToken,
     tokenExpiresAt,
     idToken: tokenResponse.id_token || ""
   });
 }
 
 async function createOnlineMeeting(payload) {
+  const settings = await getSettings();
+  if (settings.debugEnabled) {
+    console.log("[tb-teams] Creating online meeting.");
+  }
   const accessToken = await getAccessToken(true);
   const body = {
     subject: payload.title || "Teams meeting",
@@ -222,6 +281,9 @@ async function createOnlineMeeting(payload) {
     throw new Error(message);
   }
 
+  if (settings.debugEnabled) {
+    console.log("[tb-teams] Online meeting created.");
+  }
   return json.joinWebUrl || "";
 }
 

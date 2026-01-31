@@ -22,6 +22,7 @@ let windowListenerRegistered = false;
 let teamsIconUrl = null;
 let windowListener = null;
 let debugEnabled = false;
+const OBSERVER_TIMEOUT_MS = 10000;
 
 function log(message) {
   if (!debugEnabled) {
@@ -120,6 +121,42 @@ function readDateTime(picker) {
   return parsed;
 }
 
+function formatDateTimeWithOffset(date) {
+  const pad2 = value => String(value).padStart(2, "0");
+  const year = date.getFullYear();
+  const month = pad2(date.getMonth() + 1);
+  const day = pad2(date.getDate());
+  const hours = pad2(date.getHours());
+  const minutes = pad2(date.getMinutes());
+  const seconds = pad2(date.getSeconds());
+  const offsetMinutes = date.getTimezoneOffset();
+  const offsetTotal = Math.abs(offsetMinutes);
+  const offsetHours = pad2(Math.floor(offsetTotal / 60));
+  const offsetMins = pad2(offsetTotal % 60);
+  const sign = offsetMinutes <= 0 ? "+" : "-";
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${sign}${offsetHours}:${offsetMins}`;
+}
+
+function normalizeAllDayTimes(start, end) {
+  if (!start) {
+    return { start, end };
+  }
+  const normalizedStart = new Date(start);
+  normalizedStart.setHours(0, 0, 0, 0);
+  let normalizedEnd = end ? new Date(end) : null;
+  if (normalizedEnd) {
+    normalizedEnd.setHours(0, 0, 0, 0);
+  } else {
+    normalizedEnd = new Date(normalizedStart);
+    normalizedEnd.setDate(normalizedEnd.getDate() + 1);
+  }
+  if (normalizedEnd <= normalizedStart) {
+    normalizedEnd = new Date(normalizedStart);
+    normalizedEnd.setDate(normalizedEnd.getDate() + 1);
+  }
+  return { start: normalizedStart, end: normalizedEnd };
+}
+
 function buildPayload(win) {
   const doc = getDialogDoc(win);
   const title = doc.getElementById("item-title")?.value || "";
@@ -127,8 +164,13 @@ function buildPayload(win) {
   const allDay = !!doc.getElementById("event-all-day")?.checked;
   const startPicker = doc.getElementById("event-starttime");
   const endPicker = doc.getElementById("event-endtime");
-  const start = readDateTime(startPicker);
-  const end = readDateTime(endPicker);
+  let start = readDateTime(startPicker);
+  let end = readDateTime(endPicker);
+  if (allDay) {
+    const normalized = normalizeAllDayTimes(start, end);
+    start = normalized.start;
+    end = normalized.end;
+  }
 
   let descriptionText = "";
   const editor = doc.getElementById("item-description");
@@ -140,8 +182,8 @@ function buildPayload(win) {
     title,
     location,
     isAllDay: allDay,
-    startDateTime: start ? start.toISOString() : "",
-    endDateTime: end ? end.toISOString() : "",
+    startDateTime: start ? formatDateTimeWithOffset(start) : "",
+    endDateTime: end ? formatDateTimeWithOffset(end) : "",
     descriptionText
   };
 }
@@ -188,11 +230,23 @@ function createTeamsButtonInDoc(doc, win, dialogId) {
   return true;
 }
 
+function clearObserver(win) {
+  if (win?.__teamsObserver) {
+    win.__teamsObserver.disconnect();
+    win.__teamsObserver = null;
+  }
+  if (win?.__teamsObserverTimer) {
+    win.clearTimeout(win.__teamsObserverTimer);
+    win.__teamsObserverTimer = null;
+  }
+}
+
 function createTeamsButton(win) {
   const dialogId = ensureDialogId(win);
   const doc = win.document;
   const primaryDoc = getDialogDoc(win);
 
+  clearObserver(win);
   log(`Attempting button injection. docHref=${doc?.location?.href || "unknown"} primaryDocHref=${primaryDoc?.location?.href || "unknown"}`);
   if (createTeamsButtonInDoc(doc, win, dialogId)) {
     return;
@@ -209,11 +263,11 @@ function createTeamsButton(win) {
 
   const observer = new ObserverClass(() => {
     if (createTeamsButtonInDoc(doc, win, dialogId)) {
-      observer.disconnect();
+      clearObserver(win);
       return;
     }
     if (primaryDoc !== doc && createTeamsButtonInDoc(primaryDoc, win, dialogId)) {
-      observer.disconnect();
+      clearObserver(win);
     }
   });
 
@@ -221,6 +275,11 @@ function createTeamsButton(win) {
   if (primaryDoc !== doc) {
     observer.observe(primaryDoc.documentElement, { childList: true, subtree: true });
   }
+  win.__teamsObserver = observer;
+  win.__teamsObserverTimer = win.setTimeout(() => {
+    log("MutationObserver timeout; stopping delayed injection.");
+    clearObserver(win);
+  }, OBSERVER_TIMEOUT_MS);
 }
 
 function ensureDialog(win) {
@@ -289,6 +348,7 @@ function registerWindowListener() {
       if (win?.__teamsDialogId) {
         dialogWindows.delete(win.__teamsDialogId);
       }
+      clearObserver(win);
     },
     onWindowTitleChange() {}
   };

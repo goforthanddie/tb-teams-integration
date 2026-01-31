@@ -12,11 +12,8 @@ body {
 
 .container {
   max-width: 720px;
-  margin: 32px auto;
   padding: 24px;
   background: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
 }
 
 h1 {
@@ -111,6 +108,19 @@ button:hover {
   background: #1d4ed8;
 }
 
+.secondary {
+  width: auto;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: #e2e8f0;
+  color: #1f2933;
+  font-size: 12px;
+}
+
+.secondary:hover {
+  background: #cbd5e1;
+}
+
 .hint {
   font-weight: 400;
   font-size: 12px;
@@ -148,9 +158,15 @@ button:hover {
   color: #52606d;
 }
 
+.redirect-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 6px;
+}
+
 .redirect code {
   display: block;
-  margin-top: 6px;
   padding: 8px 10px;
   border-radius: 8px;
   background: #eef2f7;

@@ -1,5 +1,8 @@
 # TB Teams Integration
 
+Author: Lorenz Pressler  
+Website: https://github.com/rezeptpflichtig/tb-teams-integration
+
 Adds a **Create Teams meeting** button to the Thunderbird event dialog. When clicked, the add-on authenticates the user with Microsoft (OAuth 2.0 + PKCE), creates an online meeting via Microsoft Graph, and injects the join link into the event description (and location if empty).
 You need to register an App within Microsoft Entra for your organisation. This won't work if you just have a personal Microsoft Account.
 

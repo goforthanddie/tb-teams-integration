@@ -40,33 +40,36 @@
       <form id="settings-form">
         <label>
           Application ID
-          <input id="clientId" type="text" placeholder="REPLACE_WITH_CLIENT_ID" required>
+          <input id="clientId" type="text" data-placeholder="client-id" required>
         </label>
 
         <label>
           Tenant ID or domain
-          <input id="tenant" type="text" placeholder="organizations">
+          <input id="tenant" type="text" data-placeholder="tenant">
           <span class="hint">Use your tenant GUID, tenant domain, or "organizations".</span>
         </label>
 
         <label>
           Authority host
-          <input id="authorityHost" type="text" placeholder="https://login.microsoftonline.com">
-        </label>
-
-        <label>
-          Scopes
-          <input id="scopes" type="text" placeholder="OnlineMeetings.ReadWrite offline_access openid profile">
+          <input id="authorityHost" type="text" data-placeholder="authority-host">
         </label>
 
         <label class="checkbox">
           <input id="debugEnabled" type="checkbox">
           Enable debug logging
         </label>
+        <label class="checkbox">
+          <input id="allowCustomAuthorityHost" type="checkbox">
+          Allow custom authority host (skip known-host warning)
+        </label>
 
         <div class="redirect">
           Redirect URI:
-          <code id="redirectUri"></code>
+          <div class="redirect-row">
+            <code id="redirectUri"></code>
+            <button type="button" id="copyRedirect" class="secondary">Copy</button>
+          </div>
+          <span id="redirectStatus" class="status"></span>
         </div>
 
         <div class="status-panel">
@@ -83,6 +86,8 @@
       </form>
     </main>
 
+    <script src="../shared/constants.js"></script>
+    <script src="../shared/validation.js"></script>
     <script src="options.js"></script>
   </body>
 </html>

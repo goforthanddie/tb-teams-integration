@@ -14,7 +14,7 @@ XPI_PATH="${OUT_DIR}/${XPI_NAME}.xpi"
   cd "${ROOT_DIR}"
   zip -r "${XPI_PATH}" \
     manifest.json background.js \
-    experiments options icons README.md >/dev/null
+    experiments options icons shared README.md >/dev/null
 )
 
 echo "Built: ${XPI_PATH}"
