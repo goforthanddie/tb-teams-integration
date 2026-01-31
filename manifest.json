@@ -8,7 +8,9 @@
   "applications": {
     "gecko": {
       "id": "tb-teams-integration@pressler.pro",
-      "strict_min_version": "145.0"
+      "strict_min_version": "145.0",
+      "strict_max_version": "148"
+
     }
   },
   "background": {
