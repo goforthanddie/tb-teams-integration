@@ -33,9 +33,9 @@
     }
   },
   "icons": {
-    "48": "icons/teams.svg"
+    "48": "icons/addon.svg"
   },
   "web_accessible_resources": [
-    "icons/teams.svg"
+    "icons/button.svg"
   ]
 }

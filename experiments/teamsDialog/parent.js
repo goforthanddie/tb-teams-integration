@@ -211,7 +211,7 @@ function createTeamsButtonInDoc(doc, win, dialogId) {
   const button = buttonFactory("toolbarbutton");
   button.setAttribute("id", "tb-teams-create-button");
   button.setAttribute("class", "toolbarbutton-1");
-  button.setAttribute("label", "Teams");
+  button.setAttribute("label", "Teams meeting");
   button.setAttribute("tooltiptext", "Create Teams meeting");
   if (teamsIconUrl) {
     button.setAttribute("image", teamsIconUrl);
@@ -385,7 +385,7 @@ function showError(win, message) {
 
 const TeamsDialogAPI = class extends ExtensionCommon.ExtensionAPI {
   getAPI(context) {
-    teamsIconUrl = context.extension.baseURI.resolve("icons/teams.svg");
+    teamsIconUrl = context.extension.baseURI.resolve("icons/button.svg");
     log("teamsDialog API initialized.");
     return {
       teamsDialog: {
