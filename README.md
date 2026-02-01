@@ -1,10 +1,7 @@
 # TB Teams Integration
 
-Author: Lorenz Pressler  
-Website: https://github.com/rezeptpflichtig/tb-teams-integration
-
 Adds a **Create Teams meeting** button to the Thunderbird event dialog. When clicked, the add-on authenticates the user with Microsoft (OAuth 2.0 + PKCE), creates an online meeting via Microsoft Graph, and injects the join link into the event description (and location if empty).
-You need to register an App within Microsoft Entra for your organisation. This won't work if you just have a personal Microsoft Account.
+All accounts require an app registration in Microsoft Entra. Personal Microsoft accounts can use calendar scheduling when the app allows consumer sign-in.
 
 ## Setup (Microsoft Entra ID)
 
@@ -38,7 +35,14 @@ You need to register an App within Microsoft Entra for your organisation. This w
 - This add-on uses delegated OAuth; each user must sign in the first time they click the button.
 - If the user is already signed in to Microsoft in the auth window, SSO will reduce friction.
 - Tokens are stored in Thunderbird extension storage and refreshed automatically.
-- Personal Microsoft accounts can sign in if your app allows them, but Teams meeting creation may not be supported.
+- Direct meetings use `/me/onlineMeetings` and require a work or school account with Teams/Exchange licensing.
+- Calendar scheduling uses `/me/events` with `isOnlineMeeting` and works for personal accounts only if the app allows consumer sign-in.
+- App registration (Application ID) is required for all account types.
+
+## Meeting Modes
+
+- **Direct meeting**: Creates a Teams meeting via `/me/onlineMeetings` and inserts the join link into the Thunderbird event.
+- **Calendar schedule**: Creates a calendar event via `/me/events` with `isOnlineMeeting=true`. The join link may not be returned for some personal accounts.
 
 ## Enterprise Deployment
 
@@ -57,7 +61,7 @@ What is stored locally:
 
 Where data is sent:
 - Microsoft login endpoints for OAuth.
-- Microsoft Graph (`/me/onlineMeetings`) to create the meeting.
+- Microsoft Graph (`/me/onlineMeetings` and `/me/events`) to create the meeting.
 
 The add-on does not transmit data to any other servers.
 

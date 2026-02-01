@@ -1,14 +1,23 @@
-/* global browser, DEFAULT_APPLICATION_ID, DEFAULT_TENANT, DEFAULT_AUTHORITY_HOST, DEFAULT_SCOPES, isPlaceholder, validateSettings */
+/* global browser, DEFAULT_APPLICATION_ID, DEFAULT_TENANT, DEFAULT_AUTHORITY_HOST, DEFAULT_SCOPES, DEFAULT_ACCOUNT_MODE, DEFAULT_MEETING_MODE, isPlaceholder, validateSettings */
 
 async function getSettings() {
   const data = await browser.storage.local.get({
-    clientId: DEFAULT_APPLICATION_ID,
+    clientId: "",
     tenant: DEFAULT_TENANT,
     authorityHost: DEFAULT_AUTHORITY_HOST,
     scopes: DEFAULT_SCOPES.join(" "),
     debugEnabled: false,
-    allowCustomAuthorityHost: false
+    allowCustomAuthorityHost: false,
+    accountMode: DEFAULT_ACCOUNT_MODE,
+    meetingMode: DEFAULT_MEETING_MODE,
+    useDefaultApplicationId: false
   });
+  if (data.clientId === DEFAULT_APPLICATION_ID) {
+    data.clientId = "";
+  }
+  if (!data.scopes) {
+    data.scopes = getScopesForMeetingMode(data.meetingMode);
+  }
   return data;
 }
 
@@ -82,6 +91,13 @@ function normalizeScopes(value) {
     .join(" ");
 }
 
+function getScopesForMeetingMode(meetingMode) {
+  if (meetingMode === "calendar") {
+    return ["Calendars.ReadWrite", "offline_access", "openid", "profile"].join(" ");
+  }
+  return ["OnlineMeetings.ReadWrite", "offline_access", "openid", "profile"].join(" ");
+}
+
 async function buildPkce() {
   const verifier = randomString(96);
   const challenge = base64UrlEncode(await sha256(verifier));
@@ -107,7 +123,7 @@ async function getAccessToken(interactive = true) {
   }
   if (isPlaceholder(settings.clientId)) {
     await browser.runtime.openOptionsPage();
-    throw new Error("Missing client ID. Configure the add-on options first.");
+    throw new Error("Missing Application ID. Configure the add-on options first.");
   }
 
   const validation = validateSettings(settings);
@@ -125,7 +141,8 @@ async function getAccessToken(interactive = true) {
     tokenScopes: ""
   });
 
-  const expectedScopes = normalizeScopes(settings.scopes || DEFAULT_SCOPES.join(" "));
+  const scopesForMode = settings.scopes || getScopesForMeetingMode(settings.meetingMode);
+  const expectedScopes = normalizeScopes(scopesForMode);
   if (tokenState.tokenScopes && tokenState.tokenScopes !== expectedScopes) {
     if (settings.debugEnabled) {
       console.log("[tb-teams] Token scopes changed; clearing cached tokens.");
@@ -174,7 +191,7 @@ async function getAccessToken(interactive = true) {
   const { verifier, challenge } = await buildPkce();
   const state = randomString(32);
   const redirectUri = browser.identity.getRedirectURL();
-  const scopes = settings.scopes || DEFAULT_SCOPES.join(" ");
+  const scopes = settings.scopes || getScopesForMeetingMode(settings.meetingMode);
   const authorityHost = validation.normalized.authorityHost || settings.authorityHost;
   const tenant = validation.normalized.tenant || settings.tenant;
   const authority = `${authorityHost.replace(/\/$/, "")}/${tenant}`;
@@ -300,10 +317,16 @@ async function createOnlineMeeting(payload) {
   if (settings.debugEnabled) {
     console.log("[tb-teams] Creating online meeting.");
   }
+  if (settings.accountMode === "work" && isPlaceholder(settings.clientId)) {
+    throw new Error("Missing Application ID. Configure the add-on options first.");
+  }
+  if (settings.meetingMode === "calendar") {
+    return createOnlineMeetingForCalendar(payload, settings);
+  }
   const tokenState = await browser.storage.local.get({ idToken: "" });
   const accountInfo = getAccountTypeFromIdToken(tokenState.idToken);
   if (accountInfo.type === "personal") {
-    return createOnlineMeetingForPersonal(payload, settings);
+    throw new Error("Direct meetings are only supported for work or school accounts. Use calendar scheduling for personal accounts.");
   }
   const accessToken = await getAccessToken(true);
   const body = {
@@ -344,7 +367,7 @@ function toUtcDateTime(value) {
   return parsed.toISOString().replace("Z", "");
 }
 
-async function createOnlineMeetingForPersonal(payload, settings) {
+async function createOnlineMeetingForCalendar(payload, settings) {
   const accessToken = await getAccessToken(true);
   const startUtc = toUtcDateTime(payload.startDateTime);
   const endUtc = toUtcDateTime(payload.endDateTime);
@@ -449,12 +472,16 @@ browser.runtime.onMessage.addListener(async (message) => {
     const tokenState = await browser.storage.local.get({ idToken: "" });
     const accountInfo = getAccountTypeFromIdToken(tokenState.idToken);
     const accountSummary = getAccountSummaryFromIdToken(tokenState.idToken);
+    const requiresCustomAppId = settings.accountMode === "work" && settings.meetingMode === "direct";
+    const hasCustomAppId = !!settings.clientId && !isPlaceholder(settings.clientId) && !settings.useDefaultApplicationId;
     return {
       configured: !isPlaceholder(settings.clientId),
       accountType: accountInfo.type,
       tenantId: accountInfo.tenantId,
       accountEmail: accountSummary.email,
-      accountName: accountSummary.name
+      accountName: accountSummary.name,
+      accountMode: settings.accountMode,
+      meetingMode: settings.meetingMode
     };
   }
   if (message.type === "logout") {
@@ -470,6 +497,7 @@ browser.runtime.onMessage.addListener(async (message) => {
     return { ok: true };
   }
   if (message.type === "testConnection") {
+    const settings = await getSettings();
     const token = await getAccessToken(true);
     const tokenState = await browser.storage.local.get({ idToken: "" });
     const accountInfo = getAccountTypeFromIdToken(tokenState.idToken);
@@ -479,7 +507,9 @@ browser.runtime.onMessage.addListener(async (message) => {
       accountType: accountInfo.type,
       tenantId: accountInfo.tenantId,
       accountEmail: accountSummary.email,
-      accountName: accountSummary.name
+      accountName: accountSummary.name,
+      accountMode: settings.accountMode,
+      meetingMode: settings.meetingMode
     };
   }
   return null;

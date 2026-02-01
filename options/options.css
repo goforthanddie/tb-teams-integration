@@ -81,6 +81,25 @@ label {
   font-weight: 600;
 }
 
+.radio-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-weight: 600;
+}
+
+.radio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.radio input {
+  width: 16px;
+  height: 16px;
+}
+
 .checkbox input {
   width: 16px;
   height: 16px;

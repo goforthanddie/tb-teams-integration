@@ -3,6 +3,8 @@
 const DEFAULT_APPLICATION_ID = "REPLACE_WITH_APPLICATION_ID";
 const DEFAULT_TENANT = "organizations";
 const DEFAULT_AUTHORITY_HOST = "https://login.microsoftonline.com";
+const DEFAULT_ACCOUNT_MODE = "work";
+const DEFAULT_MEETING_MODE = "direct";
 const DEFAULT_SCOPES = [
   "OnlineMeetings.ReadWrite",
   "Calendars.ReadWrite",

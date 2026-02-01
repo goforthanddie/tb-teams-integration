@@ -9,38 +9,82 @@
     <main class="container">
       <h1>Teams Integration Settings</h1>
       <p>
-        Configure the Azure AD app registration used for Microsoft Graph. These values are required
-        before the add-on can authenticate.
+        Adds a <b>Teams meeting</b> button to the Thunderbird event dialog. When clicked, the add-on
+        authenticates the user with Microsoft (OAuth 2.0 + PKCE), creates an online meeting via
+        Microsoft Graph, and injects the join link into the event description (and location if empty).
+        This addon requires an app registration in Microsoft Entra. For work/school accounts this has
+        to be done by your org admin. For personal accounts you can create a free tier Azure account
+        to do this.
       </p>
 
       <section class="card">
-        <h2>Setup Guide</h2>
+        <h2>Setup steps</h2>
         <details>
           <summary>Show setup steps</summary>
           <ol class="guide">
-            <li>Create an app registration in Microsoft Entra ID.</li>
-            <li>Set supported account types (work/school only recommended).</li>
-            <li>Add the redirect URI shown below under the SPA platform.</li>
-            <li>Add Microsoft Graph delegated permissions:
-              <code>OnlineMeetings.ReadWrite</code>,
-              <code>openid</code>,
-              <code>profile</code>,
-              <code>offline_access</code>.
-            </li>
-            <li>Grant admin consent (recommended).</li>
-            <li>Paste the Application ID and tenant below and click Save.</li>
+            <li>Choose account type personal or work/school (based on the type of MS account you have).</li>
+            <li>Choose the kind of meeting type you want to create.</li>
+            <ul>
+              <li>Direct meeting (only available for work/school accounts): creates a direct meeting link and inserts it into the calendar event.</li>
+              <li>Calendar schedule: The meeting will be created as an event in the Teams calendar of the account.</li>
+            </ul>
+            <li>Create an app registration in Microsoft Entra ID</li>
+            <ul>
+              <li>work account: ask your org admin to do this</li>
+              <li>personal account: create a free Azure account, create a tenant, then register the app there. Trying to log into entra.microsoft.com with a personal account will usually guide you through the process.</li>
+            </ul>
+            <li>In Entra ID:</li>
+            <ul>
+              <li>add the redirect URI shown below under the SPA platform.</li>
+              <li>grant Microsoft Graph delegated permissions:</li>
+              <ul>
+                <li><code>OnlineMeetings.ReadWrite</code> (for direct meetings)</li>
+                <li><code>Calendars.ReadWrite</code> (for calendar scheduling)</li>
+                <li><code>openid</code></li>
+                <li><code>profile</code></li>
+                <li><code>offline_access</code></li>
+              </ul>
+              <li>In Entra ID, grant admin consent (recommended, so your users won't have to click scary consent to sharing profile data).</li>
+            </ul>
+            <li>Back here, paste the Application ID (optional: tenant ID) and click Save.</li>
           </ol>
-          <p class="note">
-            Personal Microsoft accounts can sign in if your app allows them, but Graph may not
-            support creating Teams meetings for personal accounts.
-          </p>
         </details>
       </section>
 
       <form id="settings-form">
         <label>
+          Account type
+          <div class="radio-row">
+            <label class="radio">
+              <input type="radio" name="accountMode" value="personal">
+              Personal
+            </label>
+            <label class="radio">
+              <input type="radio" name="accountMode" value="work">
+              Work/School
+            </label>
+          </div>
+        </label>
+
+        <label>
+          Meeting type
+          <div class="radio-row">
+            <label class="radio">
+              <input type="radio" name="meetingMode" value="direct">
+              Direct meeting
+            </label>
+            <label class="radio">
+              <input type="radio" name="meetingMode" value="calendar">
+              Calendar schedule
+            </label>
+          </div>
+          <span class="hint">Direct meeting creates a Teams link immediately. Calendar schedule creates a calendar event and tries to add a meeting link.</span>
+        </label>
+
+        <label id="clientIdRow">
           Application ID
-          <input id="clientId" type="text" data-placeholder="client-id" required>
+          <input id="clientId" type="text" data-placeholder="client-id">
+          <span id="clientIdHint" class="hint">Required for all accounts.</span>
         </label>
 
         <label>
@@ -79,8 +123,8 @@
         </div>
 
         <div id="personalAccountNote" class="status-panel warning hidden">
-          Personal Microsoft accounts do not reliably support Teams links via Microsoft Graph.
-          The add-on will try to create a calendar event with an online meeting, but it may fail.
+          Personal Microsoft accounts may not reliably support Teams links via Microsoft Graph.
+          Calendar scheduling may fail unless your app allows consumer sign-in.
         </div>
 
         <div class="actions">
