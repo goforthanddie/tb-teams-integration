@@ -1,6 +1,7 @@
 /* global */
 
-const DEFAULT_APPLICATION_ID = "REPLACE_WITH_APPLICATION_ID";
+const APPLICATION_ID_PLACEHOLDER = "REPLACE_WITH_APPLICATION_ID";
+const DEFAULT_APPLICATION_ID = APPLICATION_ID_PLACEHOLDER;
 const DEFAULT_TENANT = "organizations";
 const DEFAULT_AUTHORITY_HOST = "https://login.microsoftonline.com";
 const DEFAULT_ACCOUNT_MODE = "work";
@@ -17,7 +18,7 @@ function isPlaceholder(value) {
   if (!value) {
     return true;
   }
-  return value === DEFAULT_APPLICATION_ID;
+  return value === APPLICATION_ID_PLACEHOLDER;
 }
 
 function resolveDefaultApplicationId() {
