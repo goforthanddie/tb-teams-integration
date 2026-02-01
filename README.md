@@ -15,20 +15,21 @@ All accounts require an app registration in Microsoft Entra. Personal Microsoft 
    - `openid`, `profile`, `offline_access`
 5. Grant admin consent for the tenant (recommended for corporate environments).
 
-> Note: Microsoft Graph online meetings created with `/me/onlineMeetings` are not automatically stored as Exchange calendar events. This add-on inserts the join URL into the local Thunderbird event instead.
+> Note: In **Direct meeting** mode, Graph online meetings created with `/me/onlineMeetings` are not automatically stored as Exchange calendar events. This add-on inserts the join URL into the local Thunderbird event instead.
 
 ## Thunderbird Setup
 
 1. Open Thunderbird.
 2. Go to **Tools -> Add-ons and Themes -> Extensions**.
-3. Click the gear icon and choose **Debug Add-ons**.
-4. Click **Load Temporary Add-on** and select `manifest.json` from this repo.
-5. Open **Add-on Options** and fill in:
+3. Download the latest XPI from the GitHub Releases page.
+4. Click the gear icon and choose **Install Add-on From File...**.
+5. Select the downloaded `.xpi` file to install.
+6. Open **Add-on Options** and fill in:
    - Application ID
-   - Tenant (use your tenant GUID or domain; default `organizations`)
+   - Tenant (use your tenant GUID, domain or organizations; default `organizations`)
    - Authority host (default `https://login.microsoftonline.com`)
-6. Use **Test connection** to verify sign-in.
-7. Create a new calendar event and click the **Teams** button in the toolbar.
+7. Use **Test connection** to verify sign-in.
+8. Create a new calendar event and click the **Teams** button in the toolbar.
 
 ## Notes
 
