@@ -14,6 +14,7 @@ You need to register an App within Microsoft Entra for your organisation. This w
    - The options page shows a value like `https://<extension-id>.extensions.mozilla.org/`.
 4. Enable the following **Microsoft Graph** delegated permissions:
    - `OnlineMeetings.ReadWrite`
+   - `Calendars.ReadWrite`
    - `openid`, `profile`, `offline_access`
 5. Grant admin consent for the tenant (recommended for corporate environments).
 

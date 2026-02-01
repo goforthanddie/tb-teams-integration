@@ -5,9 +5,12 @@ const statusEl = document.getElementById("status");
 const testButton = document.getElementById("testConnection");
 const testStatusEl = document.getElementById("testStatus");
 const configStatusEl = document.getElementById("configStatus");
+const accountStatusEl = document.getElementById("accountStatus");
 const accountWarningEl = document.getElementById("accountWarning");
+const personalAccountNoteEl = document.getElementById("personalAccountNote");
 const copyRedirectButton = document.getElementById("copyRedirect");
 const redirectStatusEl = document.getElementById("redirectStatus");
+const logoutButton = document.getElementById("logout");
 
 async function loadSettings() {
   const data = await browser.storage.local.get({
@@ -88,28 +91,50 @@ function setWarning(text) {
   accountWarningEl.classList.remove("hidden");
 }
 
+function setPersonalAccountNote(visible) {
+  if (visible) {
+    personalAccountNoteEl.classList.remove("hidden");
+  } else {
+    personalAccountNoteEl.classList.add("hidden");
+  }
+}
+
 async function refreshStatus() {
   try {
     const status = await browser.runtime.sendMessage({ type: "getStatus" });
     if (!status) {
       configStatusEl.textContent = "Setup status: unknown";
+      accountStatusEl.textContent = "Signed in as: unknown";
       setWarning("");
+      setPersonalAccountNote(false);
       return;
     }
     if (!status.configured) {
       configStatusEl.textContent = "Setup status: missing Application ID";
+      accountStatusEl.textContent = "Signed in as: unknown";
       setWarning("");
+      setPersonalAccountNote(false);
       return;
     }
     configStatusEl.textContent = "Setup status: ready";
+    if (status.accountEmail || status.accountName) {
+      const label = status.accountEmail || status.accountName;
+      accountStatusEl.textContent = `Signed in as: ${label}`;
+    } else {
+      accountStatusEl.textContent = "Signed in as: unknown";
+    }
     if (status.accountType === "personal") {
       setWarning("Warning: personal Microsoft accounts may not support Teams meeting creation.");
+      setPersonalAccountNote(true);
     } else {
       setWarning("");
+      setPersonalAccountNote(false);
     }
   } catch (err) {
     configStatusEl.textContent = "Setup status: unknown";
+    accountStatusEl.textContent = "Signed in as: unknown";
     setWarning("");
+    setPersonalAccountNote(false);
   }
 }
 
@@ -193,6 +218,21 @@ testButton.addEventListener("click", async () => {
 
 copyRedirectButton.addEventListener("click", () => {
   copyRedirectUri();
+});
+
+logoutButton.addEventListener("click", async () => {
+  statusEl.textContent = "Signing out...";
+  try {
+    await browser.runtime.sendMessage({ type: "logout" });
+    statusEl.textContent = "Signed out.";
+  } catch (err) {
+    statusEl.textContent = "Sign out failed.";
+  } finally {
+    setTimeout(() => {
+      statusEl.textContent = "";
+    }, 1200);
+    refreshStatus();
+  }
 });
 
 loadSettings().then(refreshStatus);

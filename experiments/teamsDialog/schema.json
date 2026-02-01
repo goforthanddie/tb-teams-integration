@@ -75,6 +75,35 @@
             }
           }
         ]
+      },
+      {
+        "name": "setButtonState",
+        "type": "function",
+        "description": "Enable or disable the Teams button in the event dialog.",
+        "parameters": [
+          {
+            "name": "info",
+            "type": "object",
+            "properties": {
+              "dialogId": { "type": "integer" },
+              "disabled": { "type": "boolean" }
+            }
+          }
+        ]
+      },
+      {
+        "name": "setAllButtonState",
+        "type": "function",
+        "description": "Enable or disable the Teams button in all open event dialogs.",
+        "parameters": [
+          {
+            "name": "info",
+            "type": "object",
+            "properties": {
+              "disabled": { "type": "boolean" }
+            }
+          }
+        ]
       }
     ]
   }

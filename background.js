@@ -41,6 +41,17 @@ function getAccountTypeFromIdToken(idToken) {
   return { type: "work", tenantId };
 }
 
+function getAccountSummaryFromIdToken(idToken) {
+  const payload = decodeJwtPayload(idToken);
+  if (!payload) {
+    return { email: "", name: "" };
+  }
+  return {
+    email: payload.preferred_username || payload.email || "",
+    name: payload.name || ""
+  };
+}
+
 function base64UrlEncode(buffer) {
   const bytes = new Uint8Array(buffer);
   let binary = "";
@@ -60,6 +71,15 @@ function randomString(length) {
   const bytes = new Uint8Array(length);
   crypto.getRandomValues(bytes);
   return Array.from(bytes, b => (b % 36).toString(36)).join("");
+}
+
+function normalizeScopes(value) {
+  return String(value || "")
+    .split(/\s+/)
+    .map(scope => scope.trim())
+    .filter(Boolean)
+    .sort()
+    .join(" ");
 }
 
 async function buildPkce() {
@@ -101,8 +121,27 @@ async function getAccessToken(interactive = true) {
   const tokenState = await browser.storage.local.get({
     accessToken: "",
     refreshToken: "",
-    tokenExpiresAt: 0
+    tokenExpiresAt: 0,
+    tokenScopes: ""
   });
+
+  const expectedScopes = normalizeScopes(settings.scopes || DEFAULT_SCOPES.join(" "));
+  if (tokenState.tokenScopes && tokenState.tokenScopes !== expectedScopes) {
+    if (settings.debugEnabled) {
+      console.log("[tb-teams] Token scopes changed; clearing cached tokens.");
+    }
+    await browser.storage.local.set({
+      accessToken: "",
+      refreshToken: "",
+      tokenExpiresAt: 0,
+      idToken: "",
+      tokenScopes: expectedScopes
+    });
+    tokenState.accessToken = "";
+    tokenState.refreshToken = "";
+    tokenState.tokenExpiresAt = 0;
+    tokenState.tokenScopes = expectedScopes;
+  }
 
   const now = Date.now();
   if (tokenState.accessToken && tokenState.tokenExpiresAt > now + 60000) {
@@ -211,7 +250,7 @@ async function exchangeCodeForToken(settings, code, verifier, redirectUri, scope
     throw new Error("Token exchange failed: invalid response.");
   }
 
-  await persistToken(json);
+  await persistToken(json, "", scopes);
   return json.access_token;
 }
 
@@ -238,19 +277,21 @@ async function refreshAccessToken(settings, refreshToken) {
     return null;
   }
 
-  await persistToken(json, refreshToken);
+  await persistToken(json, refreshToken, scopes);
   return json.access_token;
 }
 
-async function persistToken(tokenResponse, existingRefreshToken = "") {
+async function persistToken(tokenResponse, existingRefreshToken = "", scopes = "") {
   const expiresInMs = (tokenResponse.expires_in || 0) * 1000;
   const tokenExpiresAt = Date.now() + expiresInMs;
   const refreshToken = tokenResponse.refresh_token || existingRefreshToken || "";
+  const tokenScopes = normalizeScopes(scopes);
   await browser.storage.local.set({
     accessToken: tokenResponse.access_token || "",
     refreshToken,
     tokenExpiresAt,
-    idToken: tokenResponse.id_token || ""
+    idToken: tokenResponse.id_token || "",
+    tokenScopes
   });
 }
 
@@ -258,6 +299,11 @@ async function createOnlineMeeting(payload) {
   const settings = await getSettings();
   if (settings.debugEnabled) {
     console.log("[tb-teams] Creating online meeting.");
+  }
+  const tokenState = await browser.storage.local.get({ idToken: "" });
+  const accountInfo = getAccountTypeFromIdToken(tokenState.idToken);
+  if (accountInfo.type === "personal") {
+    return createOnlineMeetingForPersonal(payload, settings);
   }
   const accessToken = await getAccessToken(true);
   const body = {
@@ -275,16 +321,70 @@ async function createOnlineMeeting(payload) {
     body: JSON.stringify(body)
   });
 
-  const json = await res.json();
+  const { json, text } = await readResponsePayload(res);
   if (!res.ok) {
-    const message = json?.error?.message || "Failed to create Teams meeting.";
+    const message = json?.error?.message || text || `Failed to create Teams meeting (HTTP ${res.status}).`;
     throw new Error(message);
+  }
+  if (!json) {
+    throw new Error("Failed to create Teams meeting: invalid response.");
   }
 
   if (settings.debugEnabled) {
     console.log("[tb-teams] Online meeting created.");
   }
   return json.joinWebUrl || "";
+}
+
+function toUtcDateTime(value) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "";
+  }
+  return parsed.toISOString().replace("Z", "");
+}
+
+async function createOnlineMeetingForPersonal(payload, settings) {
+  const accessToken = await getAccessToken(true);
+  const startUtc = toUtcDateTime(payload.startDateTime);
+  const endUtc = toUtcDateTime(payload.endDateTime);
+  const body = {
+    subject: payload.title || "Teams meeting",
+    start: {
+      dateTime: startUtc,
+      timeZone: "UTC"
+    },
+    end: {
+      dateTime: endUtc,
+      timeZone: "UTC"
+    },
+    isOnlineMeeting: true
+  };
+
+  const res = await fetch("https://graph.microsoft.com/v1.0/me/events", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      "Prefer": "outlook.timezone=\"UTC\""
+    },
+    body: JSON.stringify(body)
+  });
+
+  const { json, text } = await readResponsePayload(res);
+  if (!res.ok) {
+    const message = json?.error?.message || text || `Failed to create calendar event (HTTP ${res.status}).`;
+    throw new Error(message);
+  }
+  if (!json) {
+    throw new Error("Failed to create calendar event: invalid response.");
+  }
+
+  const joinUrl = json?.onlineMeeting?.joinUrl || json?.onlineMeetingUrl || "";
+  if (!joinUrl) {
+    throw new Error("Personal Microsoft accounts do not consistently support Teams links via Graph. The event was created without a meeting link.");
+  }
+  return joinUrl;
 }
 
 browser.teamsDialog.onTeamsButtonClick.addListener(async (payload) => {
@@ -322,8 +422,18 @@ if (browser.teamsDialog && typeof browser.teamsDialog.register === "function") {
   applyDebugSetting();
 
   browser.storage.onChanged.addListener((changes, area) => {
-    if (area === "local" && Object.prototype.hasOwnProperty.call(changes, "debugEnabled")) {
+    if (area !== "local") {
+      return;
+    }
+    if (Object.prototype.hasOwnProperty.call(changes, "debugEnabled")) {
       applyDebugSetting();
+    }
+    if (Object.prototype.hasOwnProperty.call(changes, "idToken")) {
+      const newToken = changes.idToken?.newValue || "";
+      const accountInfo = getAccountTypeFromIdToken(newToken);
+      if (browser.teamsDialog && typeof browser.teamsDialog.setAllButtonState === "function") {
+        browser.teamsDialog.setAllButtonState({ disabled: false });
+      }
     }
   });
 } else {
@@ -338,20 +448,38 @@ browser.runtime.onMessage.addListener(async (message) => {
     const settings = await getSettings();
     const tokenState = await browser.storage.local.get({ idToken: "" });
     const accountInfo = getAccountTypeFromIdToken(tokenState.idToken);
+    const accountSummary = getAccountSummaryFromIdToken(tokenState.idToken);
     return {
       configured: !isPlaceholder(settings.clientId),
       accountType: accountInfo.type,
-      tenantId: accountInfo.tenantId
+      tenantId: accountInfo.tenantId,
+      accountEmail: accountSummary.email,
+      accountName: accountSummary.name
     };
+  }
+  if (message.type === "logout") {
+    await browser.storage.local.set({
+      accessToken: "",
+      refreshToken: "",
+      tokenExpiresAt: 0,
+      idToken: ""
+    });
+    if (browser.teamsDialog && typeof browser.teamsDialog.setAllButtonState === "function") {
+      await browser.teamsDialog.setAllButtonState({ disabled: false });
+    }
+    return { ok: true };
   }
   if (message.type === "testConnection") {
     const token = await getAccessToken(true);
     const tokenState = await browser.storage.local.get({ idToken: "" });
     const accountInfo = getAccountTypeFromIdToken(tokenState.idToken);
+    const accountSummary = getAccountSummaryFromIdToken(tokenState.idToken);
     return {
       ok: !!token,
       accountType: accountInfo.type,
-      tenantId: accountInfo.tenantId
+      tenantId: accountInfo.tenantId,
+      accountEmail: accountSummary.email,
+      accountName: accountSummary.name
     };
   }
   return null;

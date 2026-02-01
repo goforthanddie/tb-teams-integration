@@ -203,31 +203,44 @@ function createTeamsButtonInDoc(doc, win, dialogId) {
     return false;
   }
 
-  if (doc.getElementById("tb-teams-create-button")) {
-    return true;
-  }
-
   const buttonFactory = doc.createXULElement ? doc.createXULElement.bind(doc) : doc.createElement.bind(doc);
-  const button = buttonFactory("toolbarbutton");
-  button.setAttribute("id", "tb-teams-create-button");
-  button.setAttribute("class", "toolbarbutton-1");
-  button.setAttribute("label", "Teams meeting");
-  button.setAttribute("tooltiptext", "Create Teams meeting");
-  if (teamsIconUrl) {
-    button.setAttribute("image", teamsIconUrl);
+  let button = doc.getElementById("tb-teams-create-button");
+  if (!button) {
+    button = buttonFactory("toolbarbutton");
+    button.setAttribute("id", "tb-teams-create-button");
+    button.setAttribute("class", "toolbarbutton-1");
+    button.setAttribute("label", "Teams meeting");
+    button.setAttribute("tooltiptext", "Create Teams meeting");
+    if (teamsIconUrl) {
+      button.setAttribute("image", teamsIconUrl);
+    }
+
+    button.addEventListener("command", () => {
+      if (!eventFire) {
+        return;
+      }
+      const payload = buildPayload(win);
+      eventFire.async({ dialogId, ...payload });
+    });
+
+    toolbar.appendChild(button);
+    log("Teams button inserted.");
   }
 
-  button.addEventListener("command", () => {
-    if (!eventFire) {
-      return;
-    }
-    const payload = buildPayload(win);
-    eventFire.async({ dialogId, ...payload });
-  });
-
-  toolbar.appendChild(button);
-  log("Teams button inserted.");
+  if (win.__teamsButtonDisabled) {
+    button.setAttribute("disabled", "true");
+  } else {
+    button.removeAttribute("disabled");
+  }
   return true;
+}
+
+function updateButtonState(win, disabled) {
+  if (!win) {
+    return;
+  }
+  win.__teamsButtonDisabled = Boolean(disabled);
+  createTeamsButton(win);
 }
 
 function clearObserver(win) {
@@ -407,6 +420,15 @@ const TeamsDialogAPI = class extends ExtensionCommon.ExtensionAPI {
         showError: ({ dialogId, message }) => {
           const win = dialogWindows.get(dialogId);
           showError(win, message);
+        },
+        setButtonState: ({ dialogId, disabled }) => {
+          const win = dialogWindows.get(dialogId);
+          updateButtonState(win, disabled);
+        },
+        setAllButtonState: ({ disabled }) => {
+          for (const win of dialogWindows.values()) {
+            updateButtonState(win, disabled);
+          }
         },
         onTeamsButtonClick: new ExtensionCommon.EventManager({
           context,

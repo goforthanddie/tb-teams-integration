@@ -46,7 +46,7 @@
         <label>
           Tenant ID or domain
           <input id="tenant" type="text" data-placeholder="tenant">
-          <span class="hint">Use your tenant GUID, tenant domain, or "organizations".</span>
+          <span class="hint">Tenant ID, organisations or common for work/school account; consumer for personal accounts.</span>
         </label>
 
         <label>
@@ -74,12 +74,19 @@
 
         <div class="status-panel">
           <div id="configStatus" class="status-line">Setup status: unknown</div>
+          <div id="accountStatus" class="status-line">Signed in as: unknown</div>
           <div id="accountWarning" class="status-line warning hidden"></div>
+        </div>
+
+        <div id="personalAccountNote" class="status-panel warning hidden">
+          Personal Microsoft accounts do not reliably support Teams links via Microsoft Graph.
+          The add-on will try to create a calendar event with an online meeting, but it may fail.
         </div>
 
         <div class="actions">
           <button type="submit">Save</button>
           <button type="button" id="testConnection">Test connection</button>
+          <button type="button" id="logout" class="secondary">Sign out</button>
           <span id="status" class="status"></span>
           <span id="testStatus" class="status"></span>
         </div>

@@ -5,6 +5,7 @@ const DEFAULT_TENANT = "organizations";
 const DEFAULT_AUTHORITY_HOST = "https://login.microsoftonline.com";
 const DEFAULT_SCOPES = [
   "OnlineMeetings.ReadWrite",
+  "Calendars.ReadWrite",
   "offline_access",
   "openid",
   "profile"

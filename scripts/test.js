@@ -43,6 +43,10 @@ assert.strictEqual(okTenantDomain.ok, true);
 const okTenantSpecial = get("normalizeTenant")("organizations");
 assert.strictEqual(okTenantSpecial.ok, true);
 
+const okTenantAlias = get("normalizeTenant")("consumer");
+assert.strictEqual(okTenantAlias.ok, true);
+assert.strictEqual(okTenantAlias.normalized, "consumers");
+
 const badTenant = get("normalizeTenant")("not a tenant");
 assert.strictEqual(badTenant.ok, false);
 

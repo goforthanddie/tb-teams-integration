@@ -39,9 +39,17 @@ function normalizeAuthorityHost(value) {
 }
 
 function normalizeTenant(value) {
-  const tenant = String(value || "").trim();
+  let tenant = String(value || "").trim();
   if (!tenant) {
     return { ok: false, error: "Tenant is required." };
+  }
+  const aliases = {
+    organisation: "organizations",
+    organisations: "organizations",
+    consumer: "consumers"
+  };
+  if (Object.prototype.hasOwnProperty.call(aliases, tenant)) {
+    tenant = aliases[tenant];
   }
   const normalized = tenant;
   const special = ["organizations", "common", "consumers"];
