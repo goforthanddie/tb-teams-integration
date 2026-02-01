@@ -1,4 +1,4 @@
-/* global browser, DEFAULT_APPLICATION_ID, DEFAULT_TENANT, DEFAULT_AUTHORITY_HOST, DEFAULT_SCOPES, DEFAULT_ACCOUNT_MODE, DEFAULT_MEETING_MODE, isPlaceholder, validateSettings */
+/* global browser, DEFAULT_APPLICATION_ID, DEFAULT_TENANT, DEFAULT_AUTHORITY_HOST, DEFAULT_SCOPES, DEFAULT_ACCOUNT_MODE, DEFAULT_MEETING_MODE, isPlaceholder, validateSettings, resolveDefaultApplicationId */
 
 async function getSettings() {
   const data = await browser.storage.local.get({
@@ -12,8 +12,13 @@ async function getSettings() {
     meetingMode: DEFAULT_MEETING_MODE,
     useDefaultApplicationId: false
   });
-  if (data.clientId === DEFAULT_APPLICATION_ID) {
-    data.clientId = "";
+  const defaultAppId = resolveDefaultApplicationId();
+  if (!data.clientId || isPlaceholder(data.clientId)) {
+    if (!isPlaceholder(defaultAppId)) {
+      data.clientId = defaultAppId;
+    } else {
+      data.clientId = "";
+    }
   }
   if (!data.scopes) {
     data.scopes = getScopesForMeetingMode(data.meetingMode);

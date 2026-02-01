@@ -19,3 +19,7 @@ function isPlaceholder(value) {
   }
   return value === DEFAULT_APPLICATION_ID;
 }
+
+function resolveDefaultApplicationId() {
+  return DEFAULT_APPLICATION_ID;
+}

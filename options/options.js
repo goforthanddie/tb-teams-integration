@@ -1,4 +1,4 @@
-/* global browser, DEFAULT_APPLICATION_ID, DEFAULT_TENANT, DEFAULT_AUTHORITY_HOST, DEFAULT_SCOPES, DEFAULT_ACCOUNT_MODE, DEFAULT_MEETING_MODE, isPlaceholder, validateSettings */
+/* global browser, DEFAULT_APPLICATION_ID, DEFAULT_TENANT, DEFAULT_AUTHORITY_HOST, DEFAULT_SCOPES, DEFAULT_ACCOUNT_MODE, DEFAULT_MEETING_MODE, isPlaceholder, validateSettings, resolveDefaultApplicationId */
 
 const form = document.getElementById("settings-form");
 const statusEl = document.getElementById("status");
@@ -30,6 +30,11 @@ function setMeetingMode(value) {
   for (const input of meetingModeInputs) {
     input.checked = input.value === value;
   }
+}
+
+function getEffectiveDefaultApplicationId() {
+  const value = resolveDefaultApplicationId();
+  return isPlaceholder(value) ? "" : value;
 }
 
 function updateModeState() {
@@ -69,7 +74,8 @@ function updateModeState() {
     clientIdRow.classList.remove("hidden");
     clientIdInput.required = false;
   }
-  clientIdInput.placeholder = "Required for all accounts";
+  const defaultAppId = getEffectiveDefaultApplicationId();
+  clientIdInput.placeholder = defaultAppId || "Required for all accounts";
 }
 
 function getScopesForMode(meetingMode) {
@@ -95,12 +101,17 @@ async function loadSettings() {
   const clientIdEl = document.getElementById("clientId");
   const tenantEl = document.getElementById("tenant");
   const authorityHostEl = document.getElementById("authorityHost");
-  clientIdEl.value = data.clientId;
-  tenantEl.value = data.tenant;
+  const defaultAppId = getEffectiveDefaultApplicationId();
+  if (!data.clientId || isPlaceholder(data.clientId)) {
+    clientIdEl.value = defaultAppId || "";
+  } else {
+    clientIdEl.value = data.clientId;
+  }
+  tenantEl.value = data.tenant || DEFAULT_TENANT;
   authorityHostEl.value = data.authorityHost;
   lastWorkTenant = tenantEl.value || DEFAULT_TENANT;
 
-  clientIdEl.placeholder = "Required for all accounts";
+  clientIdEl.placeholder = defaultAppId || "Required for all accounts";
   tenantEl.placeholder = DEFAULT_TENANT;
   authorityHostEl.placeholder = DEFAULT_AUTHORITY_HOST;
   document.getElementById("debugEnabled").checked = !!data.debugEnabled;
@@ -183,7 +194,7 @@ function setConfigStatus(text) {
 }
 
 function updateLocalStatus() {
-  const clientIdValue = document.getElementById("clientId").value.trim();
+  const clientIdValue = document.getElementById("clientId").value.trim() || getEffectiveDefaultApplicationId();
   if (isPlaceholder(clientIdValue)) {
     setConfigStatus("Setup status: missing Application ID");
   } else {
@@ -254,6 +265,10 @@ form.addEventListener("submit", async (event) => {
     scopes: getScopesForMode(meetingMode)
   };
 
+    if (!payload.clientId) {
+      payload.clientId = getEffectiveDefaultApplicationId();
+    }
+
   if (isPlaceholder(payload.clientId)) {
     statusEl.textContent = "Application ID is required.";
     return;
@@ -309,10 +324,8 @@ testButton.addEventListener("click", async () => {
       meetingMode: DEFAULT_MEETING_MODE,
       useDefaultApplicationId: false
     });
-    const requiresCustomAppId = settings.accountMode === "work";
-    if (requiresCustomAppId && isPlaceholder(settings.clientId)) {
-      testStatusEl.textContent = "Set Application ID first.";
-      return;
+    if (!settings.clientId || isPlaceholder(settings.clientId)) {
+      settings.clientId = getEffectiveDefaultApplicationId();
     }
     if (isPlaceholder(settings.clientId)) {
       testStatusEl.textContent = "Set Application ID first.";
@@ -374,6 +387,20 @@ document.getElementById("tenant").addEventListener("input", (event) => {
 
 document.getElementById("clientId").addEventListener("input", () => {
   updateLocalStatus();
+});
+
+document.getElementById("clientId").addEventListener("blur", (event) => {
+  if (!event.target.value.trim()) {
+    event.target.value = getEffectiveDefaultApplicationId();
+    updateLocalStatus();
+  }
+});
+
+document.getElementById("tenant").addEventListener("blur", (event) => {
+  if (!event.target.disabled && !event.target.value.trim()) {
+    event.target.value = DEFAULT_TENANT;
+    lastWorkTenant = DEFAULT_TENANT;
+  }
 });
 
 logoutButton.addEventListener("click", async () => {
