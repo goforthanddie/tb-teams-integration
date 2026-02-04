@@ -1,7 +1,7 @@
 # TB Teams Integration
 
 Adds a **Create Teams meeting** button to the Thunderbird event dialog. When clicked, the add-on authenticates the user with Microsoft (OAuth 2.0 + PKCE), creates an online meeting via Microsoft Graph, and injects the join link into the event description (and location if empty).
-All accounts require an app registration in Microsoft Entra. Personal Microsoft accounts can use calendar scheduling when the app allows consumer sign-in.
+This addon requires an app registration in Microsoft Entra to get the needed Application ID; this ID can be used on multiple instances. Personal Microsoft accounts can only use calendar scheduling (the app registration in Entra needs to allow consumer sign-in).
 
 ## Setup (Microsoft Entra ID)
 
