@@ -7,7 +7,7 @@ This addon requires an app registration in Microsoft Entra to get the needed App
 
 1. Create a new App Registration in Microsoft Entra ID.
 2. Note the **Application (client) ID**.
-3. Add a redirect URI that matches the add-on's redirect URI shown in the Options page.
+3. Add a redirect URI that matches the add-on's redirect URI shown in the Options page. Select "Single-page application" as platform.
    - The options page shows a value like `https://<extension-id>.extensions.mozilla.org/`.
 4. Enable the following **Microsoft Graph** delegated permissions:
    - `OnlineMeetings.ReadWrite`
